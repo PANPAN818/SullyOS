@@ -230,9 +230,19 @@ export type MinimaxRegion = 'domestic' | 'overseas';
 // 全局二选一：切换后所有语音场景（聊天语音条 / 约会 / 电话）统一用同一家。
 export type TtsProvider = 'minimax' | 'fishaudio';
 
+export interface VisionApiConfig {
+  /** 开启后，聊天图片先由独立视觉模型转成文字，再交给主对话模型。 */
+  enabled: boolean;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+}
+
 export interface APIConfig {
   baseUrl: string;
   apiKey: string;
+  // 可选识图中转：给不支持 image_url 的主模型补视觉能力。
+  visionApi?: VisionApiConfig;
   minimaxApiKey?: string;
   minimaxGroupId?: string;
   // 'domestic' → https://api.minimaxi.com (国内站)
@@ -328,6 +338,17 @@ export interface ActiveMsg2GlobalConfig {
    * 而不是知道它不行；握手时会补探一次，之后就有准数了。
    */
   instantChatSupported?: boolean;
+  /**
+   * 上一次探到的「这台 Worker 能不能把 LLM 凭据存成表里的一行」
+   * （GET /capabilities 的 features 含 'llm-credentials'，见 ActiveMsgClient.probeLlmCredentialsSupport）。
+   *
+   * 达标时排程 / 即时对话只在任务里带一个引用名，换 Key 只要覆盖那一行，已排的任务
+   * （含角色自己排的）下次触发自动跟上；不达标就把凭据照旧冻结进任务体。
+   *
+   * undefined / false 都按「不达标」处理：老路在哪台 Worker 上都跑得通，宁可多冻结
+   * 一份凭据，也不要拿新写法去撞一台还不认识它的 Worker。握手时会探一次。
+   */
+  llmCredentialsSupported?: boolean;
   updatedAt?: number;
 }
 
