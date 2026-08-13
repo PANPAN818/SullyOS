@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "versionCode": 30400,
+  "versionName": "3.4.0",
+  "apkUrl": "https://github.com/qegj567-cloud/SullyOS/releases/download/android-v3.4.0/SullyOS-v3.4.0-Android.apk",
+  "sha256": "182ef28f9bb8ac51f0f34634a29bf3635bd401598d6689abf988763c6b894c91",
+  "sizeBytes": 36663026,
+  "publishedAt": "2026-08-13T12:47:00Z",
+  "releaseNotes": [
+    "对齐最新 master",
+    "首个支持应用内检查和下载安装的正式分发版本",
+    "沿用旧 CHICK2 签名，可直接覆盖安装并保留数据",
+    "启用与网页版相同的匿名使用统计"
+  ]
+}

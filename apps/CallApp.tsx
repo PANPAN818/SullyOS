@@ -103,6 +103,7 @@ import {
   resolveCompanionPortrait,
   type CompanionAvatarSource,
 } from '../utils/companionAvatar';
+import { addCompanionModelOutfit, addUploadedCompanionOutfit } from '../utils/companionWardrobe';
 type CallState = 'idle' | 'connecting' | 'listening' | 'thinking' | 'speaking' | 'ended' | 'error';
 type CallMode = 'voice' | 'video';
 type VideoCallLayout = 'stage' | 'story' | 'mini';
@@ -881,8 +882,14 @@ const CallApp: React.FC = () => {
 
   const bindVideoAvatar = (character: CharacterProfile, videoAvatar: NonNullable<CharacterProfile['videoAvatar']>) => {
     const previous = character.videoAvatar;
+    const modelPatch = previous?.format === videoAvatar.format
+      ? addCompanionModelOutfit(character, videoAvatar)
+      : {
+          videoAvatar,
+          videoAvatarWardrobe: (character.videoAvatarWardrobe || []).filter(model => model.format === videoAvatar.format),
+        };
     updateCharacter(character.id, {
-      videoAvatar,
+      ...modelPatch,
       companionAvatar: {
         version: 1,
         ...character.companionAvatar,
@@ -901,7 +908,9 @@ const CallApp: React.FC = () => {
         : `${videoAvatar.fileName} 已绑定给 ${character.name}`,
       'success',
     );
-    if (previous?.assetId !== videoAvatar.assetId) void deleteAvatarModel(previous).catch(() => { /* orphan GC can clean later */ });
+    if (previous?.assetId !== videoAvatar.assetId && previous?.format !== videoAvatar.format) {
+      void deleteAvatarModel(previous).catch(() => { /* orphan GC can clean later */ });
+    }
   };
 
   const chooseStaticAvatarImage = () => {
@@ -930,20 +939,16 @@ const CallApp: React.FC = () => {
         return removeInput();
       }
       try {
-        const previousRef = character.companionAvatar?.imageRef;
         const imageRef = await putImageBlob(file);
         updateCharacter(character.id, {
-          companionAvatar: {
-            version: 1,
-            ...character.companionAvatar,
-            source: 'upload',
+          companionAvatar: addUploadedCompanionOutfit(character.companionAvatar, {
+            id: imageRef,
             imageRef,
             fileName: file.name,
             mimeType: file.type,
             importedAt: Date.now(),
-          },
+          }),
         });
-        if (previousRef && previousRef !== imageRef) await deleteBlobRef(previousRef);
         setCallMode('video');
         if (callSetupGuideOpenRef.current) setCallSetupGuideStep('camera');
         trackEvent('导入桌面静态形象', { 格式: file.type === 'image/gif' ? 'GIF' : 'PNG' });
@@ -3116,10 +3121,11 @@ ${sentencePlan}`;
           {userCameraMode === 'off' && <span className="pointer-events-none absolute right-3 top-3 z-20 h-8 w-8 rounded-tr-[1.8rem] border-r border-t" style={{ borderColor: `${accentColor}aa` }} aria-hidden />}
           <span className="pointer-events-none absolute bottom-3 left-3 z-20 text-[8px]" style={{ color: accentColor }} aria-hidden>✦</span>
           <span className="pointer-events-none absolute bottom-3 right-3 z-20 text-[7px] text-white/55" aria-hidden>✦</span>
+          {/* The action editor owns its own WebGL preview; suspend this one. */}
           <VRMVideoCallStage
             characterName={selectedChar?.name || '未选择'}
             fallbackAvatar={selectedChar?.avatar}
-            model={selectedVisualSource === 'model' ? selectedChar?.videoAvatar : undefined}
+            model={!showLive2DSettings && selectedVisualSource === 'model' ? selectedChar?.videoAvatar : undefined}
             staticAvatarSource={staticVideoAvatarActive ? selectedVisualSource : undefined}
             staticPortraitValue={staticVideoPortrait}
             staticExpressionKey={staticVideoExpressionKey}
